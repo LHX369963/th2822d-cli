@@ -1,6 +1,6 @@
 import pytest
 
-from th2822d_cli.catalog import COMMANDS, get_command, validate_value
+from th2822d_cli.catalog import COMMANDS, get_command, readback_matches, validate_value
 from th2822d_cli.errors import ProtocolError
 
 
@@ -27,3 +27,11 @@ def test_value_validation():
         validate_value(get_command("voltage.level"), "5")
     with pytest.raises(ProtocolError):
         get_command("missing")
+
+
+def test_readback_matching():
+    assert readback_matches(get_command("frequency.test"), "1000", "1kHz")
+    assert readback_matches(get_command("voltage.level"), "1", "1V")
+    assert readback_matches(get_command("function.equivalent"), "parallel", "PAL")
+    assert readback_matches(get_command("tolerance.range"), "5", "BIN2")
+    assert not readback_matches(get_command("tolerance.range"), "5", "BIN3")

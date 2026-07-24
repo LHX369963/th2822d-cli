@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-07-24T17:27:14+08:00",
+  "meter": {
+    "model": "TH2822D Handheld LCR Meter",
+    "firmware": "VER4.5.2307",
+    "serial": "SNQ48C240168",
+    "port": "/dev/ttyUSB0"
+  },
+  "trigger": {
+    "display_error": "E10",
+    "cause": "documented *GTL command rejected by connected firmware",
+    "recovery": "operator pressed the physical RMT key"
+  },
+  "checks": {
+    "initial_identity": "passed",
+    "independent_identity_reopens": {
+      "passed": 5,
+      "failed": 0
+    },
+    "combined_configuration_readback": "passed",
+    "measurement": {
+      "primary": "C",
+      "primary_value": 6.89699e-12,
+      "primary_unit": "F",
+      "secondary": "ESR",
+      "secondary_value": 145258.0,
+      "secondary_unit": "ohm",
+      "frequency_hz": 1000,
+      "voltage_v": 0.6,
+      "equivalent": "SER"
+    },
+    "typed_go_local_blocked_before_serial_open": "passed",
+    "automatic_discovery_after_repair": "passed",
+    "unit_tests": "39 passed",
+    "skill_validation": "passed",
+    "package_build": "passed"
+  },
+  "restored_configuration": {
+    "frequency_hz": 10000,
+    "voltage_v": 0.3,
+    "primary": "Z",
+    "secondary": "NULL",
+    "equivalent": "PAL",
+    "tolerance_enabled": false,
+    "tolerance_range": null,
+    "recording_enabled": false
+  }
+}

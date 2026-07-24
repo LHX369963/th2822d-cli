@@ -22,7 +22,7 @@ TH2822D Handheld LCR Meter,VER4.5.2307,SNQ48C240168
 - Instrument-side tolerance and min/max/average recording
 - UTC-stamped JSON, JSONL, CSV, and tab-separated text data acquisition
 - Catalog-based `get`, `set`, and `action`, plus `raw` and `batch`
-- Automatic return to front-panel control after each ordinary CLI invocation
+- Stable independent invocations without toggling front-panel control
 
 TH2822E's 100 kHz mode is intentionally not exposed by the typed TH2822D
 configuration command. It remains available through `raw` when using compatible
@@ -95,10 +95,11 @@ Automatic discovery probes CP2102 adapters with `*IDN?` and only accepts a
 TH2822-series identity. The default two-second timeout can be changed with
 `--timeout`.
 
-Any SCPI command places the meter in remote mode. By default the CLI sends
-`*GTL` on exit so the front panel remains usable. Use `--stay-remote` only when
-another process will continue the session. `action general.local-lock`
-deliberately remains locked until `action general.go-local` is issued.
+Any SCPI command places the meter in remote mode. Although the manual documents
+`*GTL`, connected firmware `VER4.5.2307` displayed E10 when it was sent.
+The CLI therefore remains remote on exit and rejects the typed go-local action;
+press the physical RMT key to restore front-panel control. Do not use
+`general.local-lock` unless locking the physical RMT key is intentional.
 
 ## Safety
 

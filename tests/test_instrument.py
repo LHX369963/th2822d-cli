@@ -20,10 +20,16 @@ class FakeTransport:
 
     def query(self, command):
         self.writes.append(command)
-        return self.responses[command].pop(0)
+        value = self.responses[command].pop(0)
+        if isinstance(value, Exception):
+            raise value
+        return value
+
+    def reset_input_buffer(self):
+        self.writes.append("RESET_INPUT")
 
 
-def test_configuration_and_go_local():
+def test_configuration_closes_without_go_local():
     transport = FakeTransport({
         "CALCulate:TOLerance:RANGe?": ["BIN2"],
         "FREQuency?": ["10kHz"],
@@ -39,7 +45,7 @@ def test_configuration_and_go_local():
     assert config.frequency_hz == 10000
     assert config.voltage_v == 0.6
     assert config.tolerance_range == 5
-    assert transport.writes[-1] == "*GTL"
+    assert "*GTL" not in transport.writes
     assert transport.closed
 
 

@@ -63,10 +63,11 @@ commands. Inspect them with `commands show`. Use `raw` only for a valid SCPI
 operation that lacks a typed workflow, and `batch` for line-oriented command
 files.
 
-Ordinary invocations send `*GTL` on close and restore front-panel control.
-Use `--stay-remote` only when another process is intentionally continuing
-remote work. `action general.local-lock` intentionally remains locked until
-`action general.go-local`.
+Ordinary invocations leave the meter remote. Although the manual documents
+`*GTL`, firmware `VER4.5.2307` displayed E10 when it was sent. The CLI rejects
+the typed go-local action; press the physical RMT key to restore front-panel
+control. Avoid `general.local-lock` unless locking that recovery key is
+intentional.
 
 ## Capture Across Time
 
@@ -107,8 +108,12 @@ certificate.
 
 ## Handle Firmware Behavior
 
-Allow the transport's 200 ms delay after settings/actions and query retry;
-firmware can silently drop commands sent too soon.
+Allow the transport's 800 ms write delay and query retry; firmware can silently
+drop commands sent too soon. The transport disables Linux `HUPCL` so
+closing a short-lived process does not deassert CP2102 DTR. Typed settings
+verify readback and retry without resending actions. Multi-option `configure`
+verifies the final combined state and rolls back readback mismatches. It sends
+no rollback traffic after a transport failure.
 
 Interpret tolerance bins as `BIN1` = 1%, `BIN2` = 5%, `BIN3` = 10%, and
 `BIN4` = 20%. Range writes are ignored while tolerance is off.
@@ -119,6 +124,25 @@ live value and preserve PRESENT as JSON nulls.
 
 Do not offer 100 kHz through typed TH2822D configuration; that mode belongs
 to TH2822E. Do not generalize connected TH2822D findings to other models.
+
+## Handle CLI Failures Without Losing The Task
+
+Report every CLI error to the user as soon as it occurs, including the failing
+command and immediate impact, but do not stop work solely because an error
+occurred. Keep the requested task as the first priority:
+
+- If the error blocks the task, diagnose it and attempt a repair immediately so
+  the task can continue.
+- If the error does not block the task, record enough evidence to reproduce it,
+  finish the requested task first, and then diagnose and attempt a repair.
+- After a repair, run focused regression tests plus the repository's required
+  test suite and any safe connected checks needed to establish the fix.
+- When the repair is complete and sufficiently verified, commit only the
+  repair-related changes and push that commit to the current repository remote.
+  Do not include unrelated pre-existing worktree changes.
+- If the repair is incomplete, cannot be pushed, or lacks sufficient testing,
+  continue any remaining feasible task work and explain the error, attempted
+  repair, remaining risk, and missing validation in detail in the final report.
 
 ## Verify Changes And Claims
 

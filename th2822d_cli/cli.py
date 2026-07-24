@@ -12,9 +12,9 @@ from pathlib import Path
 from typing import TextIO
 
 from . import __version__
-from .catalog import COMMANDS, get_command, validate_value
+from .catalog import COMMANDS, get_command, readback_matches, validate_value
 from .errors import ProtocolError, TH2822DError, TransportError
-from .instrument import TH2822D
+from .instrument import Configuration, TH2822D
 from .transport import SerialTransport, choose_port, discover, serial_ports
 
 
@@ -36,7 +36,7 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     ap.add_argument("--port", help="serial device; omitted to auto-discover a TH2822-series meter")
     ap.add_argument("--timeout", type=float, default=2.0, help="serial response timeout in seconds")
-    ap.add_argument("--stay-remote", action="store_true", help="do not send *GTL before closing")
+    ap.add_argument("--stay-remote", action="store_true", help=argparse.SUPPRESS)
     sub = ap.add_subparsers(dest="command", required=True)
 
     sub.add_parser("list", help="list attached CP210x adapters and probe TH2822 identity")
@@ -104,10 +104,7 @@ def _connect(args: argparse.Namespace) -> tuple[TH2822D, str]:
             port = candidates[0].port
         else:
             port, _ = choose_port(None, args.timeout)
-    return TH2822D(
-        SerialTransport(port, args.timeout),
-        go_local_on_close=not args.stay_remote,
-    ), port
+    return TH2822D(SerialTransport(port, args.timeout)), port
 
 
 def _measurement_record(meter: TH2822D, port: str, sequence: int | None = None) -> dict:
@@ -161,7 +158,80 @@ def _monitor(args: argparse.Namespace, meter: TH2822D, port: str) -> None:
             output.close()
 
 
+def _verified_set(meter: TH2822D, name: str, value: str, attempts: int = 3) -> str:
+    spec = get_command(name)
+    normalized = validate_value(spec, value)
+    response = ""
+    for _ in range(attempts):
+        meter.transport.write(f"{spec.command} {normalized}")
+        response = meter.transport.query(f"{spec.command}?")
+        if readback_matches(spec, normalized, response):
+            return response
+    raise ProtocolError(
+        f"{name} write was not applied after {attempts} attempts "
+        f"(requested {normalized!r}, read back {response!r})"
+    )
+
+
+def _reset_secondary(meter: TH2822D, primary: str, attempts: int = 3) -> str:
+    response = ""
+    for _ in range(attempts):
+        meter.transport.write(f"FUNCtion:IMPA {primary}")
+        response = meter.transport.query("FUNCtion:IMPB?")
+        if response.upper() == "NULL":
+            return response
+    raise ProtocolError(
+        f"secondary reset was not applied after {attempts} attempts (read back {response!r})"
+    )
+
+
+def _restore_configuration(meter: TH2822D, original: Configuration) -> None:
+    _verified_set(meter, "frequency.test", str(original.frequency_hz))
+    _verified_set(meter, "voltage.level", f"{original.voltage_v:g}")
+    _verified_set(meter, "function.primary", original.primary)
+    _verified_set(meter, "function.equivalent", original.equivalent)
+    if original.secondary == "NULL":
+        _reset_secondary(meter, original.primary)
+    else:
+        _verified_set(meter, "function.secondary", original.secondary)
+    if original.tolerance_enabled:
+        _verified_set(meter, "tolerance.enabled", "ON")
+        if original.tolerance_range is not None:
+            _verified_set(meter, "tolerance.range", str(original.tolerance_range))
+    else:
+        _verified_set(meter, "tolerance.enabled", "OFF")
+    _verified_set(meter, "recording.enabled", "ON" if original.recording_enabled else "OFF")
+
+
+def _verify_final_settings(meter: TH2822D, expected: dict[str, str]) -> None:
+    mismatches = []
+    for name, value in expected.items():
+        if name == "function.secondary" and value == "NULL":
+            response = meter.transport.query("FUNCtion:IMPB?")
+            matches = response.upper() == "NULL"
+        else:
+            spec = get_command(name)
+            response = meter.transport.query(f"{spec.command}?")
+            matches = readback_matches(spec, value, response)
+        if not matches:
+            mismatches.append(f"{name}: requested {value!r}, read back {response!r}")
+    if mismatches:
+        raise ProtocolError("final configuration mismatch (" + "; ".join(mismatches) + ")")
+
+
 def _configure(args: argparse.Namespace, meter: TH2822D) -> dict:
+    requested = (
+        args.frequency,
+        args.voltage,
+        args.primary,
+        args.secondary,
+        args.equivalent,
+        args.tolerance,
+        args.tolerance_range,
+        args.recording,
+    )
+    if not any(value is not None for value in requested):
+        raise ProtocolError("configure requires at least one option")
     if args.tolerance_range is not None:
         if args.tolerance == "OFF":
             raise ProtocolError("--tolerance-range cannot be combined with --tolerance OFF")
@@ -175,33 +245,58 @@ def _configure(args: argparse.Namespace, meter: TH2822D) -> dict:
         if meter.transport.query("FUNCtion:IMPA?").upper() == "DCR":
             raise ProtocolError("DCR does not support a secondary parameter")
 
+    original = meter.configuration()
     values = (
-        ("FREQuency", args.frequency),
-        ("VOLTage", args.voltage),
-        ("FUNCtion:IMPA", args.primary),
-        ("FUNCtion:EQUivalent", args.equivalent),
-        ("CALCulate:RECording:STATe", args.recording),
+        ("function.primary", "FUNCtion:IMPA", args.primary),
+        ("function.equivalent", "FUNCtion:EQUivalent", args.equivalent),
+        ("frequency.test", "FREQuency", args.frequency),
+        ("voltage.level", "VOLTage", args.voltage),
+        ("recording.enabled", "CALCulate:RECording:STATe", args.recording),
     )
     changed = {}
-    for command, value in values:
-        if value is not None:
-            meter.transport.write(f"{command} {value}")
-            changed[command] = value
-    if args.secondary == "NULL":
-        primary = args.primary or meter.transport.query("FUNCtion:IMPA?")
-        meter.transport.write(f"FUNCtion:IMPA {primary}")
-        changed["FUNCtion:IMPB"] = "NULL"
-    elif args.secondary is not None:
-        meter.transport.write(f"FUNCtion:IMPB {args.secondary}")
-        changed["FUNCtion:IMPB"] = args.secondary
-    if args.tolerance is not None:
-        meter.transport.write(f"CALCulate:TOLerance:STATe {args.tolerance}")
-        changed["CALCulate:TOLerance:STATe"] = args.tolerance
-    if args.tolerance_range is not None:
-        meter.transport.write(f"CALCulate:TOLerance:RANGe {args.tolerance_range}")
-        changed["CALCulate:TOLerance:RANGe"] = args.tolerance_range
-    if not changed:
-        raise ProtocolError("configure requires at least one option")
+    final_expected = {}
+    try:
+        for name, command, value in values:
+            if value is not None:
+                _verified_set(meter, name, value)
+                changed[command] = value
+                final_expected[name] = value
+        if args.secondary == "NULL":
+            primary = args.primary or meter.transport.query("FUNCtion:IMPA?")
+            _reset_secondary(meter, primary)
+            changed["FUNCtion:IMPB"] = "NULL"
+            final_expected["function.secondary"] = "NULL"
+        elif args.secondary is not None:
+            _verified_set(meter, "function.secondary", args.secondary)
+            changed["FUNCtion:IMPB"] = args.secondary
+            final_expected["function.secondary"] = args.secondary
+        else:
+            final_primary = args.primary or original.primary
+            if original.secondary != "NULL" and final_primary != "DCR":
+                _verified_set(meter, "function.secondary", original.secondary)
+                final_expected["function.secondary"] = original.secondary
+        if args.tolerance is not None:
+            _verified_set(meter, "tolerance.enabled", args.tolerance)
+            changed["CALCulate:TOLerance:STATe"] = args.tolerance
+            final_expected["tolerance.enabled"] = args.tolerance
+        if args.tolerance_range is not None:
+            _verified_set(meter, "tolerance.range", args.tolerance_range)
+            changed["CALCulate:TOLerance:RANGe"] = args.tolerance_range
+            final_expected["tolerance.range"] = args.tolerance_range
+        _verify_final_settings(meter, final_expected)
+    except (ProtocolError, TransportError) as exc:
+        if isinstance(exc, TransportError):
+            raise ProtocolError(
+                f"configuration failed because the instrument stopped responding ({exc}); "
+                "no rollback commands were sent and the original configuration is not confirmed"
+            ) from exc
+        try:
+            _restore_configuration(meter, original)
+        except (ProtocolError, TransportError) as restore_exc:
+            raise ProtocolError(
+                f"configuration failed ({exc}); rollback also failed ({restore_exc})"
+            ) from exc
+        raise ProtocolError(f"configuration failed and was rolled back: {exc}") from exc
     return changed
 
 
@@ -242,6 +337,10 @@ def run(args: argparse.Namespace) -> None:
             specs = [item for item in COMMANDS if not args.section or item.section == args.section]
             emit({"commands": [item.to_dict() for item in specs]})
         return
+    if args.command == "action" and args.name == "general.go-local":
+        raise ProtocolError(
+            "firmware VER4.5.2307 reports E10 for *GTL; press the physical RMT key to return local"
+        )
 
     meter, port = _connect(args)
     with meter:
@@ -271,15 +370,13 @@ def run(args: argparse.Namespace) -> None:
             if spec.kind == "action" or not spec.can_write:
                 raise ProtocolError(f"{spec.name} does not accept a value")
             value = validate_value(spec, args.value)
-            meter.transport.write(f"{spec.command} {value}")
-            emit({"port": port, "name": spec.name, "value": value})
+            response = _verified_set(meter, spec.name, value)
+            emit({"port": port, "name": spec.name, "value": value, "readback": response})
         elif args.command == "action":
             spec = get_command(args.name)
             if spec.kind != "action":
                 raise ProtocolError(f"{spec.name} is not an action")
             meter.transport.write(spec.command)
-            if spec.name == "general.local-lock":
-                meter.go_local_on_close = False
             emit({"port": port, "name": spec.name, "invoked": True})
         elif args.command == "raw":
             emit({"port": port} | _raw_line(meter, args.scpi, args.read))

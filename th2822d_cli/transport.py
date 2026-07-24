@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import contextlib
 import time
+import termios
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Iterator
@@ -52,7 +52,7 @@ class SerialTransport:
         self,
         port: str,
         timeout: float = 2.0,
-        command_delay: float = 0.2,
+        command_delay: float = 0.8,
         query_retries: int = 1,
     ) -> None:
         if timeout <= 0:
@@ -82,6 +82,9 @@ class SerialTransport:
                 dsrdtr=False,
                 exclusive=True,
             )
+            attributes = termios.tcgetattr(self._serial.fileno())
+            attributes[2] &= ~termios.HUPCL
+            termios.tcsetattr(self._serial.fileno(), termios.TCSANOW, attributes)
             self._serial.reset_input_buffer()
         except (OSError, serial.SerialException) as exc:
             self.close()
@@ -117,8 +120,8 @@ class SerialTransport:
         try:
             self.serial.write(self.encode(command))
             self.serial.flush()
-            # Firmware 4.5.2307 drops a command received within roughly 100 ms
-            # of a setting/action. Queries can proceed directly to their read.
+            # A setting can start a complete SLOW measurement cycle. Firmware
+            # may drop traffic until that cycle finishes.
             if self.command_delay and not command.rstrip().endswith("?"):
                 time.sleep(self.command_delay)
         except (OSError, serial.SerialException, serial.SerialTimeoutException) as exc:
@@ -147,6 +150,12 @@ class SerialTransport:
                 self.serial.reset_input_buffer()
         raise AssertionError("unreachable")
 
+    def reset_input_buffer(self) -> None:
+        try:
+            self.serial.reset_input_buffer()
+        except (OSError, serial.SerialException) as exc:
+            raise TransportError(f"cannot reset input buffer on {self.port}: {exc}") from exc
+
     def __enter__(self) -> "SerialTransport":
         return self.open()
 
@@ -171,8 +180,6 @@ def choose_port(
         try:
             with factory(candidate, timeout) as transport:
                 identity = parse_identity(transport.query("*IDN?"))
-                with contextlib.suppress(Exception):
-                    transport.write("*GTL")
                 matches.append((candidate, identity))
         except (TransportError, ProtocolError) as exc:
             errors.append(f"{candidate}: {exc}")
@@ -192,8 +199,6 @@ def discover(timeout: float, factory: TransportFactory = SerialTransport) -> lis
         try:
             with factory(metadata.port, timeout) as transport:
                 item["identity"] = parse_identity(transport.query("*IDN?")).to_dict()
-                with contextlib.suppress(Exception):
-                    transport.write("*GTL")
         except (TransportError, ProtocolError) as exc:
             item["error"] = str(exc)
         found.append(item)

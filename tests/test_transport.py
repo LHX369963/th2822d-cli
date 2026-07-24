@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import os
+import pty
+import termios
+
 import pytest
 
 from th2822d_cli.errors import ProtocolError, TransportError, TransportTimeout
@@ -80,3 +84,15 @@ def test_query_retries_timeout_once():
     value._serial = fake
     assert value.query("FETCh?") == "answer"
     assert fake.writes == [b"FETCh?\n", b"FETCh?\n"]
+
+
+def test_open_disables_hangup_on_close():
+    master_fd, slave_fd = pty.openpty()
+    try:
+        path = os.ttyname(slave_fd)
+        with SerialTransport(path, command_delay=0) as value:
+            attributes = termios.tcgetattr(value.serial.fileno())
+            assert not attributes[2] & termios.HUPCL
+    finally:
+        os.close(master_fd)
+        os.close(slave_fd)

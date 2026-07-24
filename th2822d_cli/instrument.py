@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 from dataclasses import asdict, dataclass
 
 from .protocol import (
@@ -47,18 +46,14 @@ def _voltage_v(value: str) -> float:
 
 
 class TH2822D:
-    def __init__(self, transport: SerialTransport, *, go_local_on_close: bool = True) -> None:
+    def __init__(self, transport: SerialTransport) -> None:
         self.transport = transport
-        self.go_local_on_close = go_local_on_close
 
     def __enter__(self) -> "TH2822D":
         self.transport.open()
         return self
 
     def close(self) -> None:
-        if self.go_local_on_close:
-            with contextlib.suppress(Exception):
-                self.transport.write("*GTL")
         self.transport.close()
 
     def __exit__(self, exc_type, exc, traceback) -> None:

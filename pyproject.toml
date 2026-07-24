@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "th2822d-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Linux command-line control and data acquisition for the Tonghui TH2822D LCR meter"
 readme = "README.md"
 requires-python = ">=3.10"

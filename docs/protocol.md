@@ -6,14 +6,26 @@ control. Commands are ASCII SCPI lines terminated by CR, LF, or CRLF. Query
 responses terminate with CRLF.
 
 Any received command places the meter in remote mode and disables the front
-panel except for RMT and POWER. `*LLO` also locks RMT. `*GTL` restores local
-operation. The CLI sends `*GTL` before an ordinary session closes unless
-`--stay-remote` is supplied.
+panel except for RMT and POWER. The manual says `*LLO` locks RMT and `*GTL`
+restores local operation. Connected firmware `VER4.5.2307` displayed E10 after
+`*GTL`, so the CLI does not send it automatically and rejects its typed action.
+Press the physical RMT key to restore local operation.
 
-On firmware `VER4.5.2307`, a new command sent less than about 100 ms after a
-setting/action can be silently dropped. The transport waits 200 ms after
-non-query commands. Query-response traffic does not require this added delay;
-if an otherwise side-effect-free query times out, it is retried once.
+On firmware `VER4.5.2307`, a setting can start a full SLOW measurement cycle.
+Traffic sent before that cycle finishes can be silently dropped, especially
+for high-impedance measurements at low frequency. The transport waits 800 ms
+after non-query commands. Query-response traffic does not require this added
+delay; if an otherwise side-effect-free query times out, it is retried once.
+
+Transactional configuration stops sending traffic rather than attempting a
+rollback if the transport becomes unresponsive. Protocol-level readback
+mismatches are rolled back because communication is still proven to work.
+
+Linux `HUPCL` is disabled on the serial file descriptor. Leaving it enabled
+deasserts DTR whenever a short-lived CLI process closes the CP2102 and can make
+the next port open miss all responses. The Windows application avoids this by
+holding one COM session; disabling hangup provides equivalent behavior for
+independent CLI invocations.
 
 ## Documented Surface
 

@@ -170,9 +170,6 @@ def main() -> int:
             meter.transport.write("*TRG")
             trigger_fetch = meter.transport.query("FETCh?")
             check("trigger", bool(trigger_fetch), response=trigger_fetch)
-            meter.transport.write("*LLO")
-            meter.transport.write("*GTL")
-            check("local lock and local restore", True)
         finally:
             # The documented protocol cannot clear a stored tolerance range, but
             # disabling tolerance restores the externally observable off state.

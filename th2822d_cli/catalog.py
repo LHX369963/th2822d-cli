@@ -112,3 +112,21 @@ def validate_value(spec: CommandSpec, value: str) -> str:
         allowed = ", ".join(spec.choices)
         raise ProtocolError(f"{spec.name} expects one of: {allowed}")
     return normalized
+
+
+def readback_matches(spec: CommandSpec, requested: str, response: str) -> bool:
+    requested = requested.strip().upper()
+    response = response.strip().upper()
+    if spec.name == "frequency.test":
+        expected = {"100": "100HZ", "120": "120HZ", "1000": "1KHZ", "10000": "10KHZ"}
+        return response == expected.get(requested)
+    if spec.name == "voltage.level":
+        expected = {"0.3": "0.3V", "0.6": "0.6V", "1": "1V"}
+        return response == expected.get(requested)
+    if spec.name == "function.equivalent":
+        expected = {"SER": "SER", "SERIES": "SER", "PAL": "PAL", "PARALLEL": "PAL"}
+        return response == expected.get(requested)
+    if spec.name == "tolerance.range":
+        expected = {"1": "BIN1", "5": "BIN2", "10": "BIN3", "20": "BIN4"}
+        return response == expected.get(requested)
+    return response == requested
