@@ -1,0 +1,31 @@
+{
+  "checks": 3985,
+  "combinations": 480,
+  "duration_seconds": 1154.597,
+  "error": null,
+  "initial_configuration": {
+    "equivalent": null,
+    "frequency_hz": null,
+    "primary": "DCR",
+    "recording_enabled": null,
+    "secondary": "NULL",
+    "tolerance_enabled": null,
+    "tolerance_range": null,
+    "voltage_v": null
+  },
+  "measurements": "validation/exhaustive-2026-07-24/measurements.csv",
+  "passed": true,
+  "port": "/dev/ttyUSB0",
+  "restored_configuration": {
+    "equivalent": null,
+    "frequency_hz": null,
+    "primary": "DCR",
+    "recording_enabled": null,
+    "secondary": "NULL",
+    "tolerance_enabled": null,
+    "tolerance_range": null,
+    "voltage_v": null
+  },
+  "timestamp": "2026-07-24T10:39:04.021Z",
+  "trace": "validation/exhaustive-2026-07-24/trace.jsonl"
+}

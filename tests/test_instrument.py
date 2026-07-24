@@ -72,6 +72,22 @@ def test_dcr_does_not_query_secondary():
     assert "FUNCtion:IMPB?" not in transport.writes
 
 
+def test_dcr_configuration_does_not_query_secondary():
+    transport = FakeTransport({
+        "FUNCtion:IMPA?": ["DCR"],
+    })
+    config = TH2822D(transport).configuration()
+    assert config.primary == "DCR"
+    assert config.secondary == "NULL"
+    assert config.frequency_hz is None
+    assert config.voltage_v is None
+    assert config.equivalent is None
+    assert config.tolerance_enabled is None
+    assert config.recording_enabled is None
+    assert "FUNCtion:IMPB?" not in transport.writes
+    assert transport.writes == ["FUNCtion:IMPA?"]
+
+
 def test_measurement_can_reuse_known_parameters():
     transport = FakeTransport({"FETCh?": ["+6.8e-4,+1.5e-2,N"]})
     meter = TH2822D(transport)

@@ -186,6 +186,9 @@ def _reset_secondary(meter: TH2822D, primary: str, attempts: int = 3) -> str:
 
 
 def _restore_configuration(meter: TH2822D, original: Configuration) -> None:
+    if original.primary == "DCR":
+        _verified_set(meter, "function.primary", "DCR")
+        return
     _verified_set(meter, "frequency.test", str(original.frequency_hz))
     _verified_set(meter, "voltage.level", f"{original.voltage_v:g}")
     _verified_set(meter, "function.primary", original.primary)
@@ -263,9 +266,10 @@ def _configure(args: argparse.Namespace, meter: TH2822D) -> dict:
                 final_expected[name] = value
         if args.secondary == "NULL":
             primary = args.primary or meter.transport.query("FUNCtion:IMPA?")
-            _reset_secondary(meter, primary)
             changed["FUNCtion:IMPB"] = "NULL"
-            final_expected["function.secondary"] = "NULL"
+            if primary.upper() != "DCR":
+                _reset_secondary(meter, primary)
+                final_expected["function.secondary"] = "NULL"
         elif args.secondary is not None:
             _verified_set(meter, "function.secondary", args.secondary)
             changed["FUNCtion:IMPB"] = args.secondary

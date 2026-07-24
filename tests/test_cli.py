@@ -106,6 +106,16 @@ def test_configure_null_secondary_resets_primary():
     assert changed["FUNCtion:IMPB"] == "NULL"
 
 
+def test_configure_dcr_null_secondary_never_queries_secondary():
+    args = cli.parser().parse_args([
+        "configure", "--primary", "DCR", "--secondary", "NULL"
+    ])
+    meter = ConfigureMeter({"FUNCtion:IMPA?": ["DCR", "DCR"]})
+    changed = cli._configure(args, meter)
+    assert meter.transport.writes == ["FUNCtion:IMPA DCR"]
+    assert changed["FUNCtion:IMPB"] == "NULL"
+
+
 def test_configure_enables_tolerance_before_range():
     args = cli.parser().parse_args([
         "configure", "--tolerance", "ON", "--tolerance-range", "5"

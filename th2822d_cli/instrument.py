@@ -18,14 +18,14 @@ from .transport import SerialTransport
 
 @dataclass(frozen=True)
 class Configuration:
-    frequency_hz: int
-    voltage_v: float
+    frequency_hz: int | None
+    voltage_v: float | None
     primary: str
     secondary: str
-    equivalent: str
-    tolerance_enabled: bool
+    equivalent: str | None
+    tolerance_enabled: bool | None
     tolerance_range: int | None
-    recording_enabled: bool
+    recording_enabled: bool | None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -63,11 +63,23 @@ class TH2822D:
         return parse_identity(self.transport.query("*IDN?"))
 
     def configuration(self) -> Configuration:
+        primary = self.transport.query("FUNCtion:IMPA?").upper()
+        if primary == "DCR":
+            return Configuration(
+                frequency_hz=None,
+                voltage_v=None,
+                primary=primary,
+                secondary="NULL",
+                equivalent=None,
+                tolerance_enabled=None,
+                tolerance_range=None,
+                recording_enabled=None,
+            )
         tolerance = self.transport.query("CALCulate:TOLerance:RANGe?")
         return Configuration(
             frequency_hz=_frequency_hz(self.transport.query("FREQuency?")),
             voltage_v=_voltage_v(self.transport.query("VOLTage?")),
-            primary=self.transport.query("FUNCtion:IMPA?").upper(),
+            primary=primary,
             secondary=self.transport.query("FUNCtion:IMPB?").upper(),
             equivalent=self.transport.query("FUNCtion:EQUivalent?").upper(),
             tolerance_enabled=self.transport.query("CALCulate:TOLerance:STATe?").upper() == "ON",

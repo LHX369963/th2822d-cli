@@ -86,3 +86,54 @@ The final stress-test configuration matched its starting snapshot:
 ```text
 L, secondary NULL, 10 kHz, 0.3 V, SER, tolerance OFF, recording OFF
 ```
+
+## DCR Secondary Regression
+
+A later high-level `configure --primary DCR --secondary NULL` test exposed a
+specific E10 cause: after successfully selecting DCR, the CLI queried
+`FUNCtion:IMPB?` to verify `NULL`. Firmware `VER4.5.2307` treats that query as
+invalid in DCR mode, displays E10, and sends no response. The DCR command itself
+is valid and had passed all six command-matrix cycles.
+
+The `v0.1.3` fix treats DCR secondary state as implicitly `NULL` and never
+queries or resets `FUNCtion:IMPB` while DCR is active. Complete DCR
+configuration snapshots query only `FUNCtion:IMPA?`; frequency, voltage,
+secondary, equivalent, tolerance, and recording fields are reported as JSON
+`null` because the manual defines the relevant settings for non-DCR operation.
+Unit regression tests assert both command streams.
+
+## Exhaustive Parameter Space
+
+`tools/exhaustive_acceptance.py` exercised the complete documented valid AC
+parameter product:
+
+```text
+L/C/R/Z
+x D/Q/THETA/ESR/NULL
+x SER/PAL
+x 100/120/1000/10000 Hz
+x 0.3/0.6/1 V
+= 480 unique combinations
+```
+
+Each combination verified final primary, secondary, equivalent, frequency,
+and voltage readback before parsing `FETCh?`. The run also covered the DCR-safe
+command subset, all tolerance ranges and queries, all recording statistics,
+identity, trigger, `*LLO`, and `*GTL`.
+
+The successful run lasted 1154.597 seconds and passed 3985 checks with no
+transport error, protocol error, failed readback, or missing combination. It
+produced 480 CSV measurements and 14152 trace events. The initial and restored
+state was DCR with all non-applicable configuration fields represented as
+`null`; the final command was `*GTL`.
+
+Two earlier attempts stopped safely on final-state mismatches and sent no
+further test traffic after failure. They established the required ordering:
+non-NULL secondary parameters must be written last, while NULL is established
+by rewriting the primary once before the remaining AC settings.
+
+Artifacts are retained under `validation/exhaustive-2026-07-24/`:
+
+- `summary.json`
+- `measurements.csv`
+- `trace.jsonl`

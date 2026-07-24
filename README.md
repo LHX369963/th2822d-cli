@@ -102,6 +102,11 @@ the command later passed repeated isolated tests after the transport delay was
 increased and Linux `HUPCL` was disabled. Do not use `general.local-lock`
 unless locking the physical RMT key is intentional.
 
+In DCR mode the secondary display is implicitly `NULL`. The CLI does not query
+`FUNCtion:IMPB?` while DCR is active because firmware `VER4.5.2307` reports E10
+for that invalid combination. Other non-applicable DCR configuration fields
+are returned as JSON `null`.
+
 ## Safety
 
 Discharge capacitors before connecting or removing them. Never measure a

@@ -21,6 +21,17 @@ delay; if an otherwise side-effect-free query times out, it is retried once.
 Transactional configuration stops sending traffic rather than attempting a
 rollback if the transport becomes unresponsive. Protocol-level readback
 mismatches are rolled back because communication is still proven to work.
+In DCR mode, the secondary parameter is implicitly `NULL`; querying
+`FUNCtion:IMPB?` in that mode produces E10 and no serial response on firmware
+`VER4.5.2307`. The manual also marks voltage, secondary, and equivalent
+settings as valid only outside DCR. High-level DCR configuration therefore
+queries only the primary mode and reports non-applicable configuration fields
+as JSON null.
+
+On this firmware, later AC settings can reset the secondary parameter. Apply
+non-NULL secondary parameters after primary, equivalent, frequency, and
+voltage. To select NULL, rewrite the primary once before applying the remaining
+AC settings; rewriting it last can reset the equivalent mode to series.
 
 Linux `HUPCL` is disabled on the serial file descriptor. Leaving it enabled
 deasserts DTR whenever a short-lived CLI process closes the CP2102 and can make

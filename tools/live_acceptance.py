@@ -191,14 +191,17 @@ def main() -> int:
         finally:
             # The documented protocol cannot clear a stored tolerance range, but
             # disabling tolerance restores the externally observable off state.
-            meter.transport.write("CALCulate:TOLerance:STATe OFF")
-            meter.transport.write("CALCulate:RECording:STATe OFF")
-            meter.transport.write(f"FREQuency {original.frequency_hz}")
-            meter.transport.write(f"VOLTage {original.voltage_v:g}")
-            meter.transport.write(f"FUNCtion:IMPA {original.primary}")
-            if original.secondary != "NULL":
-                meter.transport.write(f"FUNCtion:IMPB {original.secondary}")
-            meter.transport.write(f"FUNCtion:EQUivalent {original.equivalent}")
+            if original.primary == "DCR":
+                meter.transport.write("FUNCtion:IMPA DCR")
+            else:
+                meter.transport.write("CALCulate:TOLerance:STATe OFF")
+                meter.transport.write("CALCulate:RECording:STATe OFF")
+                meter.transport.write(f"FREQuency {original.frequency_hz}")
+                meter.transport.write(f"VOLTage {original.voltage_v:g}")
+                meter.transport.write(f"FUNCtion:IMPA {original.primary}")
+                if original.secondary != "NULL":
+                    meter.transport.write(f"FUNCtion:IMPB {original.secondary}")
+                meter.transport.write(f"FUNCtion:EQUivalent {original.equivalent}")
 
         restored = meter.configuration()
         report["restored_configuration"] = restored.to_dict()
@@ -209,8 +212,9 @@ def main() -> int:
                 before=getattr(original, field),
                 after=getattr(restored, field),
             )
-        check("restore tolerance off", not restored.tolerance_enabled)
-        check("restore recording off", not restored.recording_enabled)
+        if original.primary != "DCR":
+            check("restore tolerance off", not restored.tolerance_enabled)
+            check("restore recording off", not restored.recording_enabled)
 
     report["passed"] = all(item["passed"] for item in report["checks"])
     report["summary"] = {

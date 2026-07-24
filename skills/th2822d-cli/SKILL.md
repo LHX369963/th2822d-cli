@@ -115,6 +115,10 @@ verify readback and retry without resending actions. Multi-option `configure`
 verifies the final combined state and rolls back readback mismatches. It sends
 no rollback traffic after a transport failure.
 
+DCR has no secondary parameter. Never query `FUNCtion:IMPB?` while DCR is
+active; firmware `VER4.5.2307` displays E10 and returns no serial response.
+Treat the DCR secondary as implicitly `NULL`.
+
 Interpret tolerance bins as `BIN1` = 1%, `BIN2` = 5%, `BIN3` = 10%, and
 `BIN4` = 20%. Range writes are ignored while tolerance is off.
 
