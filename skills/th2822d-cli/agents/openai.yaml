@@ -1,0 +1,4 @@
+interface:
+  display_name: "TH2822D CLI"
+  short_description: "Operate and validate a Tonghui TH2822D LCR meter"
+  default_prompt: "Use $th2822d-cli to configure the meter and capture a safe LCR measurement."
