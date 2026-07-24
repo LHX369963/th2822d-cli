@@ -6,10 +6,11 @@ control. Commands are ASCII SCPI lines terminated by CR, LF, or CRLF. Query
 responses terminate with CRLF.
 
 Any received command places the meter in remote mode and disables the front
-panel except for RMT and POWER. The manual says `*LLO` locks RMT and `*GTL`
-restores local operation. Connected firmware `VER4.5.2307` displayed E10 after
-`*GTL`, so the CLI does not send it automatically and rejects its typed action.
-Press the physical RMT key to restore local operation.
+panel except for RMT and POWER. `*LLO` locks RMT and `*GTL` restores local
+operation. An earlier E10 was initially correlated with `*GTL`, but the command
+later passed repeated isolated tests. The earlier failure is consistent with
+the old short close delay, Linux `HUPCL`, low power, or a busy measurement
+cycle; it is not evidence that this firmware rejects `*GTL`.
 
 On firmware `VER4.5.2307`, a setting can start a full SLOW measurement cycle.
 Traffic sent before that cycle finishes can be silently dropped, especially

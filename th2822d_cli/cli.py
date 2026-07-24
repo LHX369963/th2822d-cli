@@ -337,11 +337,6 @@ def run(args: argparse.Namespace) -> None:
             specs = [item for item in COMMANDS if not args.section or item.section == args.section]
             emit({"commands": [item.to_dict() for item in specs]})
         return
-    if args.command == "action" and args.name == "general.go-local":
-        raise ProtocolError(
-            "firmware VER4.5.2307 reports E10 for *GTL; press the physical RMT key to return local"
-        )
-
     meter, port = _connect(args)
     with meter:
         identity = meter.identity()

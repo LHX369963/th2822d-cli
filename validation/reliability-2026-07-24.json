@@ -8,7 +8,8 @@
   },
   "trigger": {
     "display_error": "E10",
-    "cause": "documented *GTL command rejected by connected firmware",
+    "initial_correlation": "E10 appeared after *GTL before the transport timing and HUPCL fixes",
+    "later_result": "*GTL passed six isolated tests and is not considered firmware-incompatible",
     "recovery": "operator pressed the physical RMT key"
   },
   "checks": {
@@ -29,7 +30,8 @@
       "voltage_v": 0.6,
       "equivalent": "SER"
     },
-    "typed_go_local_blocked_before_serial_open": "passed",
+    "typed_go_local_initially_blocked": "superseded after successful isolated and stress tests",
+    "typed_go_local_current_status": "enabled",
     "automatic_discovery_after_repair": "passed",
     "unit_tests": "39 passed",
     "skill_validation": "passed",

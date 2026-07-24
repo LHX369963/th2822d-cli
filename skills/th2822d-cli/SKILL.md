@@ -63,11 +63,11 @@ commands. Inspect them with `commands show`. Use `raw` only for a valid SCPI
 operation that lacks a typed workflow, and `batch` for line-oriented command
 files.
 
-Ordinary invocations leave the meter remote. Although the manual documents
-`*GTL`, firmware `VER4.5.2307` displayed E10 when it was sent. The CLI rejects
-the typed go-local action; press the physical RMT key to restore front-panel
-control. Avoid `general.local-lock` unless locking that recovery key is
-intentional.
+Ordinary invocations leave the meter remote. Use the typed go-local action or
+press the physical RMT key to restore front-panel control. An earlier E10 was
+initially correlated with `*GTL`, but repeated isolated tests passed after the
+transport delay and Linux `HUPCL` fixes. Avoid `general.local-lock` unless
+locking the physical RMT key is intentional.
 
 ## Capture Across Time
 

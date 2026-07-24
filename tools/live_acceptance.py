@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Connected TH2822D command and 680 uF capacitor acceptance matrix."""
+"""Connected TH2822D documented-command acceptance matrix."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from th2822d_cli.instrument import TH2822D
-from th2822d_cli.protocol import parse_measurement, parse_number, parse_pair
+from th2822d_cli.protocol import parse_identity, parse_measurement, parse_number, parse_pair
 from th2822d_cli.errors import TransportError
 from th2822d_cli.transport import SerialTransport, serial_ports
 
@@ -24,6 +24,8 @@ def main() -> int:
     ap.add_argument("--port")
     ap.add_argument("--timeout", type=float, default=3.0)
     ap.add_argument("--output", type=Path)
+    ap.add_argument("--fixture", default="680 uF polymer capacitor")
+    ap.add_argument("--skip-fixture-range", action="store_true")
     args = ap.parse_args()
 
     if args.port:
@@ -36,7 +38,7 @@ def main() -> int:
     report = {
         "timestamp": now(),
         "port": port,
-        "fixture": "680 uF polymer capacitor",
+        "fixture": args.fixture,
         "checks": [],
     }
 
@@ -119,12 +121,20 @@ def main() -> int:
             time.sleep(1.5)
             capacitor = meter.measurement("C", "ESR")
             capacitance_uf = None if capacitor.primary_value is None else capacitor.primary_value * 1e6
-            check(
-                "680 uF capacitor",
-                capacitance_uf is not None and 500 <= capacitance_uf <= 850,
-                capacitance_uf=capacitance_uf,
-                measurement=capacitor.to_dict(),
-            )
+            if args.skip_fixture_range:
+                check(
+                    "fixture capacitance fetch",
+                    capacitance_uf is not None,
+                    capacitance_uf=capacitance_uf,
+                    measurement=capacitor.to_dict(),
+                )
+            else:
+                check(
+                    "680 uF capacitor",
+                    capacitance_uf is not None and 500 <= capacitance_uf <= 850,
+                    capacitance_uf=capacitance_uf,
+                    measurement=capacitor.to_dict(),
+                )
             report["capacitor_measurement"] = capacitor.to_dict() | {"capacitance_uf": capacitance_uf}
 
             set_query("CALCulate:TOLerance:STATe", "ON")
@@ -170,6 +180,14 @@ def main() -> int:
             meter.transport.write("*TRG")
             trigger_fetch = meter.transport.query("FETCh?")
             check("trigger", bool(trigger_fetch), response=trigger_fetch)
+            meter.transport.write("*LLO")
+            meter.transport.write("*GTL")
+            local_restore_identity = parse_identity(meter.transport.query("*IDN?"))
+            check(
+                "local lock and local restore",
+                local_restore_identity.model.startswith("TH2822D"),
+                response=local_restore_identity.to_dict(),
+            )
         finally:
             # The documented protocol cannot clear a stored tolerance range, but
             # disabling tolerance restores the externally observable off state.

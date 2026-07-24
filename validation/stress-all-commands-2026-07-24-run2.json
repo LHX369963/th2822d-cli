@@ -1,0 +1,516 @@
+{
+  "capacitor_measurement": {
+    "capacitance_uf": 3.20564e-06,
+    "overload": false,
+    "primary": "C",
+    "primary_unit": "F",
+    "primary_value": 3.20564e-12,
+    "secondary": "ESR",
+    "secondary_unit": "ohm",
+    "secondary_value": 71534900.0,
+    "tolerance_bin": "N"
+  },
+  "checks": [
+    {
+      "name": "identity",
+      "passed": true,
+      "response": {
+        "firmware": "VER4.5.2307",
+        "model": "TH2822D Handheld LCR Meter",
+        "serial": "SNQ48C240168"
+      }
+    },
+    {
+      "command": "FREQuency",
+      "name": "FREQuency 100",
+      "passed": true,
+      "requested": "100",
+      "response": "100HZ"
+    },
+    {
+      "command": "FREQuency",
+      "name": "FREQuency 120",
+      "passed": true,
+      "requested": "120",
+      "response": "120HZ"
+    },
+    {
+      "command": "FREQuency",
+      "name": "FREQuency 1000",
+      "passed": true,
+      "requested": "1000",
+      "response": "1KHZ"
+    },
+    {
+      "command": "FREQuency",
+      "name": "FREQuency 10000",
+      "passed": true,
+      "requested": "10000",
+      "response": "10KHZ"
+    },
+    {
+      "command": "VOLTage",
+      "name": "VOLTage 0.3",
+      "passed": true,
+      "requested": "0.3",
+      "response": "0.3V"
+    },
+    {
+      "command": "VOLTage",
+      "name": "VOLTage 0.6",
+      "passed": true,
+      "requested": "0.6",
+      "response": "0.6V"
+    },
+    {
+      "command": "VOLTage",
+      "name": "VOLTage 1",
+      "passed": true,
+      "requested": "1",
+      "response": "1V"
+    },
+    {
+      "command": "FUNCtion:EQUivalent",
+      "name": "FUNCtion:EQUivalent SER",
+      "passed": true,
+      "requested": "SER",
+      "response": "SER"
+    },
+    {
+      "command": "FUNCtion:EQUivalent",
+      "name": "FUNCtion:EQUivalent PAL",
+      "passed": true,
+      "requested": "PAL",
+      "response": "PAL"
+    },
+    {
+      "command": "FREQuency",
+      "name": "FREQuency 100",
+      "passed": true,
+      "requested": "100",
+      "response": "100HZ"
+    },
+    {
+      "command": "VOLTage",
+      "name": "VOLTage 0.3",
+      "passed": true,
+      "requested": "0.3",
+      "response": "0.3V"
+    },
+    {
+      "command": "FUNCtion:IMPA",
+      "name": "FUNCtion:IMPA C",
+      "passed": true,
+      "requested": "C",
+      "response": "C"
+    },
+    {
+      "command": "FUNCtion:EQUivalent",
+      "name": "FUNCtion:EQUivalent PAL",
+      "passed": true,
+      "requested": "PAL",
+      "response": "PAL"
+    },
+    {
+      "command": "FUNCtion:IMPB",
+      "name": "FUNCtion:IMPB D",
+      "passed": true,
+      "requested": "D",
+      "response": "D"
+    },
+    {
+      "command": "FUNCtion:IMPB",
+      "name": "FUNCtion:IMPB Q",
+      "passed": true,
+      "requested": "Q",
+      "response": "Q"
+    },
+    {
+      "command": "FUNCtion:IMPB",
+      "name": "FUNCtion:IMPB THETA",
+      "passed": true,
+      "requested": "THETA",
+      "response": "THETA"
+    },
+    {
+      "command": "FUNCtion:IMPB",
+      "name": "FUNCtion:IMPB ESR",
+      "passed": true,
+      "requested": "ESR",
+      "response": "ESR"
+    },
+    {
+      "command": "FUNCtion:IMPA C",
+      "name": "reset secondary to NULL",
+      "passed": true,
+      "response": "NULL"
+    },
+    {
+      "command": "FUNCtion:IMPA",
+      "name": "FUNCtion:IMPA L",
+      "passed": true,
+      "requested": "L",
+      "response": "L"
+    },
+    {
+      "name": "fetch L",
+      "parsed": {
+        "overload": false,
+        "primary": "L",
+        "primary_unit": "H",
+        "primary_value": -142609.0,
+        "secondary": null,
+        "secondary_unit": null,
+        "secondary_value": null,
+        "tolerance_bin": "N"
+      },
+      "passed": true,
+      "response": "-1.42609e+05,+0.00000e+00,N"
+    },
+    {
+      "command": "FUNCtion:IMPA",
+      "name": "FUNCtion:IMPA C",
+      "passed": true,
+      "requested": "C",
+      "response": "C"
+    },
+    {
+      "name": "fetch C",
+      "parsed": {
+        "overload": false,
+        "primary": "C",
+        "primary_unit": "F",
+        "primary_value": 1.67683e-11,
+        "secondary": null,
+        "secondary_unit": null,
+        "secondary_value": null,
+        "tolerance_bin": "N"
+      },
+      "passed": true,
+      "response": "+1.67683e-11,+0.00000e+00,N"
+    },
+    {
+      "command": "FUNCtion:IMPA",
+      "name": "FUNCtion:IMPA R",
+      "passed": true,
+      "requested": "R",
+      "response": "R"
+    },
+    {
+      "name": "fetch R",
+      "parsed": {
+        "overload": false,
+        "primary": "R",
+        "primary_unit": "ohm",
+        "primary_value": 140163000.0,
+        "secondary": null,
+        "secondary_unit": null,
+        "secondary_value": null,
+        "tolerance_bin": "N"
+      },
+      "passed": true,
+      "response": "+1.40163e+08,+0.00000e+00,N"
+    },
+    {
+      "command": "FUNCtion:IMPA",
+      "name": "FUNCtion:IMPA Z",
+      "passed": true,
+      "requested": "Z",
+      "response": "Z"
+    },
+    {
+      "name": "fetch Z",
+      "parsed": {
+        "overload": false,
+        "primary": "Z",
+        "primary_unit": "ohm",
+        "primary_value": 261767000.0,
+        "secondary": null,
+        "secondary_unit": null,
+        "secondary_value": null,
+        "tolerance_bin": "N"
+      },
+      "passed": true,
+      "response": "+2.61767e+08,+0.00000e+00,N"
+    },
+    {
+      "command": "FUNCtion:IMPA",
+      "name": "FUNCtion:IMPA DCR",
+      "passed": true,
+      "requested": "DCR",
+      "response": "DCR"
+    },
+    {
+      "name": "fetch DCR",
+      "parsed": {
+        "overload": false,
+        "primary": "DCR",
+        "primary_unit": "ohm",
+        "primary_value": 8678690000.0,
+        "secondary": null,
+        "secondary_unit": null,
+        "secondary_value": null,
+        "tolerance_bin": "N"
+      },
+      "passed": true,
+      "response": "+8.67869e+09,N"
+    },
+    {
+      "command": "FUNCtion:IMPA",
+      "name": "FUNCtion:IMPA C",
+      "passed": true,
+      "requested": "C",
+      "response": "C"
+    },
+    {
+      "command": "FUNCtion:IMPB",
+      "name": "FUNCtion:IMPB ESR",
+      "passed": true,
+      "requested": "ESR",
+      "response": "ESR"
+    },
+    {
+      "command": "FUNCtion:EQUivalent",
+      "name": "FUNCtion:EQUivalent PAL",
+      "passed": true,
+      "requested": "PAL",
+      "response": "PAL"
+    },
+    {
+      "command": "FREQuency",
+      "name": "FREQuency 100",
+      "passed": true,
+      "requested": "100",
+      "response": "100HZ"
+    },
+    {
+      "command": "VOLTage",
+      "name": "VOLTage 0.3",
+      "passed": true,
+      "requested": "0.3",
+      "response": "0.3V"
+    },
+    {
+      "capacitance_uf": 3.20564e-06,
+      "measurement": {
+        "overload": false,
+        "primary": "C",
+        "primary_unit": "F",
+        "primary_value": 3.20564e-12,
+        "secondary": "ESR",
+        "secondary_unit": "ohm",
+        "secondary_value": 71534900.0,
+        "tolerance_bin": "N"
+      },
+      "name": "fixture capacitance fetch",
+      "passed": true
+    },
+    {
+      "command": "CALCulate:TOLerance:STATe",
+      "name": "CALCulate:TOLerance:STATe ON",
+      "passed": true,
+      "requested": "ON",
+      "response": "ON"
+    },
+    {
+      "command": "CALCulate:TOLerance:RANGe",
+      "name": "CALCulate:TOLerance:RANGe 1",
+      "passed": true,
+      "requested": "1",
+      "response": "BIN1"
+    },
+    {
+      "command": "CALCulate:TOLerance:RANGe",
+      "name": "CALCulate:TOLerance:RANGe 5",
+      "passed": true,
+      "requested": "5",
+      "response": "BIN2"
+    },
+    {
+      "command": "CALCulate:TOLerance:RANGe",
+      "name": "CALCulate:TOLerance:RANGe 10",
+      "passed": true,
+      "requested": "10",
+      "response": "BIN3"
+    },
+    {
+      "command": "CALCulate:TOLerance:RANGe",
+      "name": "CALCulate:TOLerance:RANGe 20",
+      "passed": true,
+      "requested": "20",
+      "response": "BIN4"
+    },
+    {
+      "deviation_percent": -67.9034,
+      "fetch": "+3.47471e-12,+8.39353e+00,N",
+      "name": "tolerance values",
+      "nominal": 3.20564e-12,
+      "passed": true
+    },
+    {
+      "command": "CALCulate:TOLerance:STATe",
+      "name": "CALCulate:TOLerance:STATe OFF",
+      "passed": true,
+      "requested": "OFF",
+      "response": "OFF"
+    },
+    {
+      "command": "CALCulate:RECording:STATe",
+      "name": "CALCulate:RECording:STATe ON",
+      "passed": true,
+      "requested": "ON",
+      "response": "ON"
+    },
+    {
+      "name": "recording maximum",
+      "note": "",
+      "parsed": {
+        "primary_value": 1.73092e-11,
+        "secondary_value": 0.0
+      },
+      "passed": true,
+      "response": "+1.73092e-11,+0.00000e+00"
+    },
+    {
+      "name": "recording minimum",
+      "note": "",
+      "parsed": {
+        "primary_value": 1.89671e-11,
+        "secondary_value": 0.0
+      },
+      "passed": true,
+      "response": "+1.89671e-11,+0.00000e+00"
+    },
+    {
+      "name": "recording average",
+      "note": "",
+      "parsed": {
+        "primary_value": 1.89671e-11,
+        "secondary_value": 0.0
+      },
+      "passed": true,
+      "response": "+1.89671e-11,+0.00000e+00"
+    },
+    {
+      "name": "recording present",
+      "note": "VER4.5.2307 returns no PRESENT data",
+      "parsed": {
+        "primary_value": null,
+        "secondary_value": null
+      },
+      "passed": true,
+      "response": "-----"
+    },
+    {
+      "command": "CALCulate:RECording:STATe",
+      "name": "CALCulate:RECording:STATe OFF",
+      "passed": true,
+      "requested": "OFF",
+      "response": "OFF"
+    },
+    {
+      "name": "trigger",
+      "passed": true,
+      "response": "+1.30854e-11,+0.00000e+00,N"
+    },
+    {
+      "name": "local lock and local restore",
+      "passed": true,
+      "response": {
+        "firmware": "VER4.5.2307",
+        "model": "TH2822D Handheld LCR Meter",
+        "serial": "SNQ48C240168"
+      }
+    },
+    {
+      "after": 10000,
+      "before": 10000,
+      "name": "restore frequency_hz",
+      "passed": true
+    },
+    {
+      "after": 0.3,
+      "before": 0.3,
+      "name": "restore voltage_v",
+      "passed": true
+    },
+    {
+      "after": "L",
+      "before": "L",
+      "name": "restore primary",
+      "passed": true
+    },
+    {
+      "after": "NULL",
+      "before": "NULL",
+      "name": "restore secondary",
+      "passed": true
+    },
+    {
+      "after": "SER",
+      "before": "SER",
+      "name": "restore equivalent",
+      "passed": true
+    },
+    {
+      "name": "restore tolerance off",
+      "passed": true
+    },
+    {
+      "name": "restore recording off",
+      "passed": true
+    }
+  ],
+  "fixture": "unknown two-terminal component",
+  "identity": {
+    "firmware": "VER4.5.2307",
+    "model": "TH2822D Handheld LCR Meter",
+    "serial": "SNQ48C240168"
+  },
+  "original_configuration": {
+    "equivalent": "SER",
+    "frequency_hz": 10000,
+    "primary": "L",
+    "recording_enabled": false,
+    "secondary": "NULL",
+    "tolerance_enabled": false,
+    "tolerance_range": null,
+    "voltage_v": 0.3
+  },
+  "passed": true,
+  "port": "/dev/ttyUSB0",
+  "recording_statistics": {
+    "average": {
+      "primary_value": 1.89671e-11,
+      "secondary_value": 0.0
+    },
+    "maximum": {
+      "primary_value": 1.73092e-11,
+      "secondary_value": 0.0
+    },
+    "minimum": {
+      "primary_value": 1.89671e-11,
+      "secondary_value": 0.0
+    },
+    "present": {
+      "primary_value": null,
+      "secondary_value": null
+    }
+  },
+  "restored_configuration": {
+    "equivalent": "SER",
+    "frequency_hz": 10000,
+    "primary": "L",
+    "recording_enabled": false,
+    "secondary": "NULL",
+    "tolerance_enabled": false,
+    "tolerance_range": null,
+    "voltage_v": 0.3
+  },
+  "summary": {
+    "failed": 0,
+    "passed": 57,
+    "total": 57
+  },
+  "timestamp": "2026-07-24T09:44:43Z"
+}

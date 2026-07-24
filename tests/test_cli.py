@@ -27,15 +27,33 @@ def test_not_found_is_structured(monkeypatch, capsys):
     assert value["error"] == "not_found"
 
 
-def test_go_local_is_rejected_without_connecting(monkeypatch, capsys):
-    def unexpected_connect(args):
-        raise AssertionError("go-local must be rejected before opening the serial port")
+def test_go_local_action_is_sent(monkeypatch, capsys):
+    class Transport:
+        def __init__(self):
+            self.writes = []
 
-    monkeypatch.setattr(cli, "_connect", unexpected_connect)
-    assert cli.main(["action", "general.go-local"]) == cli.EXIT_PROTOCOL
-    value = json.loads(capsys.readouterr().err)
-    assert value["error"] == "protocol"
-    assert "physical RMT key" in value["message"]
+        def write(self, command):
+            self.writes.append(command)
+
+    class Meter:
+        def __init__(self):
+            self.transport = Transport()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def identity(self):
+            return None
+
+    meter = Meter()
+    monkeypatch.setattr(cli, "_connect", lambda args: (meter, "/dev/fake"))
+    assert cli.main(["action", "general.go-local"]) == 0
+    value = json.loads(capsys.readouterr().out)
+    assert value["name"] == "general.go-local"
+    assert meter.transport.writes == ["*GTL"]
 
 
 def test_configure_requires_option():

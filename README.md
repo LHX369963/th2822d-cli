@@ -95,11 +95,12 @@ Automatic discovery probes CP2102 adapters with `*IDN?` and only accepts a
 TH2822-series identity. The default two-second timeout can be changed with
 `--timeout`.
 
-Any SCPI command places the meter in remote mode. Although the manual documents
-`*GTL`, connected firmware `VER4.5.2307` displayed E10 when it was sent.
-The CLI therefore remains remote on exit and rejects the typed go-local action;
-press the physical RMT key to restore front-panel control. Do not use
-`general.local-lock` unless locking the physical RMT key is intentional.
+Any SCPI command places the meter in remote mode. Ordinary invocations remain
+remote on exit; use `action general.go-local` or the physical RMT key to restore
+front-panel control. An earlier E10 was initially correlated with `*GTL`, but
+the command later passed repeated isolated tests after the transport delay was
+increased and Linux `HUPCL` was disabled. Do not use `general.local-lock`
+unless locking the physical RMT key is intentional.
 
 ## Safety
 

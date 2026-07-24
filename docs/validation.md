@@ -13,15 +13,13 @@
 ## Acceptance Result
 
 The original `tools/live_acceptance.py` run reported 57 passed checks in
-`validation/live-2026-07-24.json`. One check only confirmed that `*LLO` and
-`*GTL` bytes were written; it did not verify that the meter accepted them.
-The meter later displayed E10 immediately after `*GTL`, so that check is
-invalidated. The remaining 56 checks passed, and the acceptance script no
-longer sends either command.
+`validation/live-2026-07-24.json`. Its `*LLO`/`*GTL` check only confirmed that
+bytes were written. The revised check now follows those actions with `*IDN?`
+and verifies the returned identity.
 
 Coverage included:
 
-- identity
+- identity and front-panel local/lock actions
 - all TH2822D frequencies: 100 Hz, 120 Hz, 1 kHz, and 10 kHz
 - all levels: 0.3 V, 0.6 V, and 1 V
 - series and parallel equivalent modes
@@ -43,8 +41,8 @@ This is a functional fixture result, not an independent accuracy calibration.
 
 ## Observed Firmware Differences
 
-- A command issued within roughly 100 ms after a setting can be dropped.
-  A 200 ms write delay and one query-only retry were reliable.
+- A command issued before a SLOW measurement cycle finishes can be dropped.
+  An 800 ms write delay and one query-only retry were reliable.
 - `FUNCtion:IMPB NULL` is ignored. Rewriting the active primary parameter
   resets the secondary response to `NULL`.
 - Tolerance range writes are ignored while tolerance mode is off.
@@ -53,9 +51,10 @@ This is a functional fixture result, not an independent accuracy calibration.
   minimum, and average returned valid pairs.
 - With tolerance disabled, `FETCh?` returned bin `N`, although the manual
   describes that field as NR1.
-- The documented `*GTL` command produced E10 (unknown command) on
-  `VER4.5.2307`. Pressing the physical RMT key restored local control. `*LLO`
-  is not exercised because it could disable that recovery key.
+- An E10 was initially correlated with `*GTL`, but the command subsequently
+  passed six isolated tests and six complete command-matrix cycles after the
+  transport delay and Linux `HUPCL` fixes. The earlier event does not establish
+  that `*GTL` is invalid.
 
 The acceptance script restored the initial configuration:
 
@@ -68,8 +67,22 @@ C, secondary NULL, 100 Hz, 0.3 V, PAL, tolerance OFF, recording OFF
 After the operator cleared E10 with the physical RMT key, the `v0.1.1`
 candidate passed five independent identity-query reopen cycles, a combined
 configuration/readback transaction, a measurement, automatic discovery, and
-final configuration restoration. No test sent `*GTL` or `*LLO`.
+final configuration restoration.
 
 The retained report is `validation/reliability-2026-07-24.json`. The final
 configuration was `Z`, secondary `NULL`, 10 kHz, 0.3 V, parallel equivalent,
 tolerance off, and recording off.
+
+The follow-up `v0.1.2` candidate passed six isolated `*GTL` attempts, then six
+complete documented-command cycles from 09:43:50Z through 09:48:13Z. All
+342 checks passed. Each cycle covered all frequencies, voltages, equivalent
+modes, primary and secondary functions, tolerance operations, recording
+statistics, fetch, trigger, `*LLO`, `*GTL`, identity verification, and state
+restoration. Reports are retained as
+`validation/stress-all-commands-2026-07-24-run1.json` through `run6.json`.
+
+The final stress-test configuration matched its starting snapshot:
+
+```text
+L, secondary NULL, 10 kHz, 0.3 V, SER, tolerance OFF, recording OFF
+```
