@@ -8,13 +8,13 @@ description: Operate, test, debug, or document the Tonghui TH2822D LCR meter thr
 ## Establish Context
 
 Resolve the repository as the directory two levels above this Skill's real
-path. Read `README.md` before device work and `docs/validation.md` before
-coverage claims. Read `docs/protocol.md` when command semantics or firmware
-quirks matter.
+path. Read `README.md`, validation evidence, or protocol details only when the
+task needs them.
 
 The validated meter is `TH2822D Handheld LCR Meter`, firmware
 `VER4.5.2307`, serial `SNQ48C240168`. It uses a CP2102 at 9600 8N1 and has
-appeared as `/dev/ttyUSB0`; discover it rather than assuming the node.
+appeared as `/dev/ttyUSB0`; use a known explicit node directly and discover only
+when selection is uncertain.
 
 ## Use The Public CLI
 
@@ -22,14 +22,9 @@ Use `th2822d`, preferring the repository's `.venv/bin/th2822d` when present.
 Do not open the serial node directly or call transport classes when a public
 CLI workflow exists.
 
-Start with:
-
-```bash
-th2822d list
-th2822d info
-th2822d config
-th2822d read
-```
+Run the requested operation directly when the meter and serial node are known.
+Use `list`, `info`, or `config` only for discovery, identity, or configuration
+diagnosis; do not make them routine preflight.
 
 Configure through the high-level command:
 
@@ -64,7 +59,7 @@ operation that lacks a typed workflow, and `batch` for line-oriented command
 files.
 
 Ordinary invocations leave the meter remote. Use the typed go-local action or
-press the physical RMT key to restore front-panel control. An earlier E10 was
+physical RMT key only when the user explicitly requests front-panel control. An earlier E10 was
 initially correlated with `*GTL`, but repeated isolated tests passed after the
 transport delay and Linux `HUPCL` fixes. Avoid `general.local-lock` unless
 locking the physical RMT key is intentional.
@@ -96,10 +91,9 @@ connecting or removing them. Never apply external voltage to the LCR
 terminals, measure a powered circuit, modify firmware, or invoke undocumented
 bootloader behavior.
 
-Before changing modes, record `config`. Restore frequency, voltage, primary,
-secondary, equivalent, tolerance state, and recording state in cleanup. Use
-`tools/live_acceptance.py` for the connected matrix because it performs this
-restoration in `finally`.
+Do not require users to record or restore configuration around ordinary mode
+changes. `tools/live_acceptance.py` is reserved for explicit connected acceptance
+work and is not part of routine measurement.
 
 Do not infer component identity or calibration from one broad reading. Report
 the exact frequency, level, equivalent mode, and secondary parameter. Treat
@@ -150,13 +144,13 @@ occurred. Keep the requested task as the first priority:
 
 ## Verify Changes And Claims
 
-Run:
+After code changes, run the offline tests:
 
 ```bash
 python -m pytest
-python tools/live_acceptance.py --port /dev/ttyUSB0
 ```
 
-Retain connected evidence under `validation/`. Verify final `config` matches
-the starting state. Separate protocol readback, functional component response,
-and metrological accuracy in all reports.
+Run focused connected acceptance only when the change requires it. Retain that
+evidence under `validation/`; do not require final configuration comparison or
+restoration as a routine user step. Separate protocol readback, functional
+component response, and metrological accuracy in all reports.

@@ -52,9 +52,6 @@ Do not run the CLI with `sudo`.
 ## Use
 
 ```bash
-th2822d list
-th2822d info
-th2822d config
 th2822d read
 
 th2822d configure --primary C --secondary ESR --frequency 100 --voltage 0.3 --equivalent PAL
@@ -70,6 +67,10 @@ th2822d configure --tolerance-range 5 --tolerance ON
 th2822d tolerance
 th2822d configure --tolerance OFF
 ```
+
+Use `list`, `info`, or `config` only when port selection, identity, or
+configuration is uncertain; they are not prerequisites for `read`, `configure`,
+or `monitor`.
 
 Catalog and low-level workflows:
 
@@ -96,8 +97,8 @@ TH2822-series identity. The default two-second timeout can be changed with
 `--timeout`.
 
 Any SCPI command places the meter in remote mode. Ordinary invocations remain
-remote on exit; use `action general.go-local` or the physical RMT key to restore
-front-panel control. An earlier E10 was initially correlated with `*GTL`, but
+remote on exit. Use `action general.go-local` or the physical RMT key only when
+the user explicitly wants front-panel control again. An earlier E10 was initially correlated with `*GTL`, but
 the command later passed repeated isolated tests after the transport delay was
 increased and Linux `HUPCL` was disabled. Do not use `general.local-lock`
 unless locking the physical RMT key is intentional.
