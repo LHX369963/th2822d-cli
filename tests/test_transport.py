@@ -6,6 +6,7 @@ import termios
 
 import pytest
 
+import th2822d_cli.transport as transport
 from th2822d_cli.errors import ProtocolError, TransportError, TransportTimeout
 from th2822d_cli.transport import SerialTransport
 
@@ -96,3 +97,24 @@ def test_open_disables_hangup_on_close():
     finally:
         os.close(master_fd)
         os.close(slave_fd)
+
+
+def test_explicit_port_does_not_enumerate_serial_devices(monkeypatch):
+    class FakeTransport:
+        def __init__(self, port, timeout):
+            assert (port, timeout) == ("/dev/ttyUSB7", 1.0)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
+
+        def query(self, command):
+            assert command == "*IDN?"
+            return "TH2822D Handheld LCR Meter,VER4.5.2307,SNTEST"
+
+    monkeypatch.setattr(transport, "serial_ports", lambda: pytest.fail("enumerated ports"))
+    port, identity = transport.choose_port("/dev/ttyUSB7", 1.0, FakeTransport)
+    assert port == "/dev/ttyUSB7"
+    assert identity.model == "TH2822D Handheld LCR Meter"
