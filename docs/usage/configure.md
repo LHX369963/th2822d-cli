@@ -1,7 +1,7 @@
 # Configuration and readings
 
 ```bash
-th2822d read
+th2822d measure
 th2822d configure --primary C --secondary ESR \
   --frequency 100 --voltage 0.3 --equivalent PAL
 ```

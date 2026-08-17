@@ -3,8 +3,8 @@ import json
 import pytest
 
 from th2822d_cli import cli
-from th2822d_cli.errors import ProtocolError, TransportError
-from th2822d_cli.instrument import Configuration
+from th2822d_cli.errors import ProtocolError
+from th2822d_cli.protocol import Measurement
 
 
 def test_command_catalog_without_hardware(capsys):
@@ -25,6 +25,28 @@ def test_not_found_is_structured(monkeypatch, capsys):
     assert cli.main(["info"]) == cli.EXIT_NOT_FOUND
     value = json.loads(capsys.readouterr().err)
     assert value["error"] == "not_found"
+
+
+def test_measure_summarizes_internal_samples_and_warns_without_hiding_result(monkeypatch, capsys):
+    class Transport:
+        def query(self, command):
+            return {"FUNCtion:IMPA?": "L", "FUNCtion:IMPB?": "Q"}[command]
+
+    class Meter:
+        transport = Transport()
+        values = iter((0.00020, 0.00021, 0.00030))
+
+        def measurement(self, primary, secondary):
+            return Measurement("L", next(self.values), "H", "Q", 10.0, "", "N", False)
+
+    args = cli.parser().parse_args([
+        "measure", "--samples", "3", "--min-interval", "0", "--max-interval", "0",
+    ])
+    monkeypatch.setattr(cli.time, "sleep", lambda seconds: None)
+    cli._measure_many(args, Meter(), "/dev/fake")
+    streams = capsys.readouterr()
+    assert streams.out == "0.00021 H spread=0.0001\n"
+    assert streams.err == "warning: unstable=0.0002..0.0003\n"
 
 
 def test_go_local_action_is_sent(monkeypatch, capsys):
@@ -51,8 +73,7 @@ def test_go_local_action_is_sent(monkeypatch, capsys):
     meter = Meter()
     monkeypatch.setattr(cli, "_connect", lambda args: (meter, "/dev/fake"))
     assert cli.main(["action", "general.go-local"]) == 0
-    value = json.loads(capsys.readouterr().out)
-    assert value["name"] == "general.go-local"
+    assert capsys.readouterr().out == ""
     assert meter.transport.writes == ["*GTL"]
 
 
@@ -81,21 +102,8 @@ class ConfigureTransport:
 
 
 class ConfigureMeter:
-    def __init__(self, responses=None, configuration=None):
+    def __init__(self, responses=None):
         self.transport = ConfigureTransport(responses)
-        self._configuration = configuration
-
-    def configuration(self):
-        return self._configuration or Configuration(
-            frequency_hz=100,
-            voltage_v=0.3,
-            primary="C",
-            secondary="NULL",
-            equivalent="PAL",
-            tolerance_enabled=False,
-            tolerance_range=None,
-            recording_enabled=False,
-        )
 
 
 def test_configure_null_secondary_resets_primary():
@@ -131,14 +139,21 @@ def test_configure_enables_tolerance_before_range():
     ]
 
 
-def test_configure_range_requires_tolerance():
+def test_configure_range_enables_tolerance_automatically():
     args = cli.parser().parse_args([
         "configure", "--frequency", "1000", "--tolerance-range", "5"
     ])
-    meter = ConfigureMeter({"CALCulate:TOLerance:STATe?": "OFF"})
-    with pytest.raises(ProtocolError, match="requires tolerance mode"):
-        cli._configure(args, meter)
-    assert meter.transport.writes == []
+    meter = ConfigureMeter({
+        "CALCulate:TOLerance:STATe?": "ON",
+        "CALCulate:TOLerance:RANGe?": "BIN2",
+        "FREQuency?": "1kHz",
+    })
+    cli._configure(args, meter)
+    assert meter.transport.writes == [
+        "FREQuency 1000",
+        "CALCulate:TOLerance:STATe ON",
+        "CALCulate:TOLerance:RANGe 5",
+    ]
 
 
 def test_configure_rejects_dcr_secondary_before_writing():
@@ -166,47 +181,19 @@ def test_verified_set_retries_dropped_write():
     assert meter.transport.writes == ["FREQuency 1000", "FREQuency 1000"]
 
 
-def test_configure_rolls_back_after_failed_write(monkeypatch):
+def test_configure_reports_failed_write_without_rollback():
     args = cli.parser().parse_args(["configure", "--frequency", "1000"])
     meter = ConfigureMeter({"FREQuency?": ["100Hz", "100Hz", "100Hz"]})
-    restored = []
-    monkeypatch.setattr(cli, "_restore_configuration", lambda current, original: restored.append(original))
-    with pytest.raises(ProtocolError, match="rolled back"):
+    with pytest.raises(ProtocolError, match="was not applied"):
         cli._configure(args, meter)
-    assert len(restored) == 1
+    assert meter.transport.writes == ["FREQuency 1000"] * 3
 
 
-def test_configure_preserves_unspecified_secondary():
+def test_configure_leaves_unspecified_secondary_untouched():
     args = cli.parser().parse_args(["configure", "--frequency", "1000"])
-    original = Configuration(
-        frequency_hz=100,
-        voltage_v=0.3,
-        primary="Z",
-        secondary="THETA",
-        equivalent="SER",
-        tolerance_enabled=False,
-        tolerance_range=None,
-        recording_enabled=False,
-    )
-    meter = ConfigureMeter(
-        {"FREQuency?": ["1kHz", "1kHz"], "FUNCtion:IMPB?": ["THETA", "THETA"]},
-        configuration=original,
-    )
+    meter = ConfigureMeter({"FREQuency?": "1kHz"})
     cli._configure(args, meter)
-    assert meter.transport.writes == ["FREQuency 1000", "FUNCtion:IMPB THETA"]
-
-
-def test_final_configuration_mismatch_rolls_back(monkeypatch):
-    args = cli.parser().parse_args(["configure", "--primary", "Z", "--frequency", "100"])
-    meter = ConfigureMeter({
-        "FUNCtion:IMPA?": ["Z", "L"],
-        "FREQuency?": ["100Hz", "100Hz"],
-    })
-    restored = []
-    monkeypatch.setattr(cli, "_restore_configuration", lambda current, original: restored.append(original))
-    with pytest.raises(ProtocolError, match="final configuration mismatch"):
-        cli._configure(args, meter)
-    assert len(restored) == 1
+    assert meter.transport.writes == ["FREQuency 1000"]
 
 
 def test_raw_infers_query():

@@ -11,6 +11,5 @@ only when tab separation is required. Records contain UTC timestamps and SI
 base units.
 
 Polling does not change the meter's RATE setting. Polling faster than the active
-measurement rate may repeat the latest reading. A single `read` cannot establish
-stability or drift; see the Skill's `references/validation.md` when making such
-claims.
+measurement rate may repeat the latest reading. Use `measure` for an internal
+randomly spaced stability sample without creating a monitor stream.

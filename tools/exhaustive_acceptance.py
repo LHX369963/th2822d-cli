@@ -13,7 +13,7 @@ from pathlib import Path
 
 from th2822d_cli.catalog import get_command, readback_matches
 from th2822d_cli.errors import ProtocolError, TransportError
-from th2822d_cli.instrument import Configuration, TH2822D
+from th2822d_cli.instrument import TH2822D, Configuration
 from th2822d_cli.protocol import (
     parse_identity,
     parse_measurement,

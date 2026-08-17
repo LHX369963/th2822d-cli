@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import random
+import statistics
 import sys
 import time
 from datetime import datetime, timezone
@@ -14,9 +16,8 @@ from typing import TextIO
 from . import __version__
 from .catalog import COMMANDS, get_command, readback_matches, validate_value
 from .errors import ProtocolError, TH2822DError, TransportError
-from .instrument import Configuration, TH2822D
+from .instrument import TH2822D
 from .transport import SerialTransport, choose_port, discover, serial_ports
-
 
 EXIT_NOT_FOUND = 3
 EXIT_TRANSPORT = 4
@@ -42,7 +43,16 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("list", help="list attached CP210x adapters and probe TH2822 identity")
     sub.add_parser("info", help="show instrument identity")
     sub.add_parser("config", help="query the complete remote configuration")
-    sub.add_parser("read", help="read one typed measurement")
+    def add_measurement_arguments(command):
+        command.add_argument("--samples", type=int, default=7)
+        command.add_argument("--min-interval", type=int, default=120, metavar="MS")
+        command.add_argument("--max-interval", type=int, default=380, metavar="MS")
+        command.add_argument("--expect", type=float)
+        command.add_argument("--tolerance", type=float, default=5.0, metavar="PERCENT")
+        command.add_argument("--json", action="store_true")
+
+    add_measurement_arguments(sub.add_parser("measure", help="sample repeatedly and return one summary"))
+    add_measurement_arguments(sub.add_parser("read", help="alias of measure"))
 
     monitor = sub.add_parser("monitor", help="capture measurements as JSONL, CSV, or text")
     monitor.add_argument("--interval", type=float, default=0.25, help="seconds between reads")
@@ -107,11 +117,56 @@ def _connect(args: argparse.Namespace) -> tuple[TH2822D, str]:
     return TH2822D(SerialTransport(port, args.timeout)), port
 
 
-def _measurement_record(meter: TH2822D, port: str, sequence: int | None = None) -> dict:
-    record = {"timestamp": _timestamp(), "port": port}
-    if sequence is not None:
-        record["sequence"] = sequence
-    return record | meter.measurement().to_dict()
+def _measure_many(args: argparse.Namespace, meter: TH2822D, port: str) -> None:
+    if args.samples <= 0:
+        raise ProtocolError("samples must be positive")
+    if not 0 <= args.min_interval <= args.max_interval <= 10000:
+        raise ProtocolError("measurement intervals require 0 <= min <= max <= 10000 ms")
+    if args.tolerance < 0:
+        raise ProtocolError("tolerance cannot be negative")
+    primary = meter.transport.query("FUNCtion:IMPA?")
+    secondary = "NULL" if primary.upper() == "DCR" else meter.transport.query("FUNCtion:IMPB?")
+    measurements = []
+    for index in range(args.samples):
+        measurements.append(meter.measurement(primary, secondary))
+        if index + 1 < args.samples:
+            time.sleep(random.uniform(args.min_interval, args.max_interval) / 1000)
+    valid = [item for item in measurements if item.primary_value is not None and not item.overload]
+    if not valid:
+        print("warning: no valid measurement", file=sys.stderr)
+        print("None")
+        return
+    values = [float(item.primary_value) for item in valid]
+    median, minimum, maximum = statistics.median(values), min(values), max(values)
+    warnings = []
+    if len(valid) != len(measurements):
+        warnings.append("intermittent")
+    if maximum - minimum > max(abs(median) * 0.02, 1e-15):
+        warnings.append(f"unstable={minimum:.8g}..{maximum:.8g}")
+    if args.expect is not None:
+        allowed = max(abs(args.expect) * args.tolerance / 100, 1e-15)
+        if abs(median - args.expect) > allowed:
+            warnings.append(f"expected={args.expect:.8g} got={median:.8g}")
+    if warnings:
+        print("warning: " + " ".join(warnings), file=sys.stderr)
+    if args.json:
+        secondary_values = [
+            float(item.secondary_value) for item in valid if item.secondary_value is not None
+        ]
+        emit({
+            "primary": valid[-1].primary,
+            "value": median,
+            "unit": valid[-1].primary_unit,
+            "samples": len(valid),
+            "min": minimum,
+            "max": maximum,
+            "secondary": valid[-1].secondary,
+            "secondary_value": statistics.median(secondary_values) if secondary_values else None,
+            "secondary_unit": valid[-1].secondary_unit,
+            "port": port,
+        })
+    else:
+        print(f"{median} {valid[-1].primary_unit} spread={maximum - minimum:.8g}")
 
 
 def _monitor(args: argparse.Namespace, meter: TH2822D, port: str) -> None:
@@ -185,43 +240,6 @@ def _reset_secondary(meter: TH2822D, primary: str, attempts: int = 3) -> str:
     )
 
 
-def _restore_configuration(meter: TH2822D, original: Configuration) -> None:
-    if original.primary == "DCR":
-        _verified_set(meter, "function.primary", "DCR")
-        return
-    _verified_set(meter, "frequency.test", str(original.frequency_hz))
-    _verified_set(meter, "voltage.level", f"{original.voltage_v:g}")
-    _verified_set(meter, "function.primary", original.primary)
-    _verified_set(meter, "function.equivalent", original.equivalent)
-    if original.secondary == "NULL":
-        _reset_secondary(meter, original.primary)
-    else:
-        _verified_set(meter, "function.secondary", original.secondary)
-    if original.tolerance_enabled:
-        _verified_set(meter, "tolerance.enabled", "ON")
-        if original.tolerance_range is not None:
-            _verified_set(meter, "tolerance.range", str(original.tolerance_range))
-    else:
-        _verified_set(meter, "tolerance.enabled", "OFF")
-    _verified_set(meter, "recording.enabled", "ON" if original.recording_enabled else "OFF")
-
-
-def _verify_final_settings(meter: TH2822D, expected: dict[str, str]) -> None:
-    mismatches = []
-    for name, value in expected.items():
-        if name == "function.secondary" and value == "NULL":
-            response = meter.transport.query("FUNCtion:IMPB?")
-            matches = response.upper() == "NULL"
-        else:
-            spec = get_command(name)
-            response = meter.transport.query(f"{spec.command}?")
-            matches = readback_matches(spec, value, response)
-        if not matches:
-            mismatches.append(f"{name}: requested {value!r}, read back {response!r}")
-    if mismatches:
-        raise ProtocolError("final configuration mismatch (" + "; ".join(mismatches) + ")")
-
-
 def _configure(args: argparse.Namespace, meter: TH2822D) -> dict:
     requested = (
         args.frequency,
@@ -239,16 +257,16 @@ def _configure(args: argparse.Namespace, meter: TH2822D) -> dict:
         if args.tolerance == "OFF":
             raise ProtocolError("--tolerance-range cannot be combined with --tolerance OFF")
         if args.tolerance is None:
-            enabled = meter.transport.query("CALCulate:TOLerance:STATe?").upper() == "ON"
-            if not enabled:
-                raise ProtocolError("--tolerance-range requires tolerance mode; add --tolerance ON")
+            args.tolerance = "ON"
     if args.primary == "DCR" and args.secondary not in {None, "NULL"}:
         raise ProtocolError("DCR does not support a secondary parameter")
-    if args.primary is None and args.secondary not in {None, "NULL"}:
-        if meter.transport.query("FUNCtion:IMPA?").upper() == "DCR":
-            raise ProtocolError("DCR does not support a secondary parameter")
+    if (
+        args.primary is None
+        and args.secondary not in {None, "NULL"}
+        and meter.transport.query("FUNCtion:IMPA?").upper() == "DCR"
+    ):
+        raise ProtocolError("DCR does not support a secondary parameter")
 
-    original = meter.configuration()
     values = (
         ("function.primary", "FUNCtion:IMPA", args.primary),
         ("function.equivalent", "FUNCtion:EQUivalent", args.equivalent),
@@ -257,50 +275,24 @@ def _configure(args: argparse.Namespace, meter: TH2822D) -> dict:
         ("recording.enabled", "CALCulate:RECording:STATe", args.recording),
     )
     changed = {}
-    final_expected = {}
-    try:
-        for name, command, value in values:
-            if value is not None:
-                _verified_set(meter, name, value)
-                changed[command] = value
-                final_expected[name] = value
-        if args.secondary == "NULL":
-            primary = args.primary or meter.transport.query("FUNCtion:IMPA?")
-            changed["FUNCtion:IMPB"] = "NULL"
-            if primary.upper() != "DCR":
-                _reset_secondary(meter, primary)
-                final_expected["function.secondary"] = "NULL"
-        elif args.secondary is not None:
-            _verified_set(meter, "function.secondary", args.secondary)
-            changed["FUNCtion:IMPB"] = args.secondary
-            final_expected["function.secondary"] = args.secondary
-        else:
-            final_primary = args.primary or original.primary
-            if original.secondary != "NULL" and final_primary != "DCR":
-                _verified_set(meter, "function.secondary", original.secondary)
-                final_expected["function.secondary"] = original.secondary
-        if args.tolerance is not None:
-            _verified_set(meter, "tolerance.enabled", args.tolerance)
-            changed["CALCulate:TOLerance:STATe"] = args.tolerance
-            final_expected["tolerance.enabled"] = args.tolerance
-        if args.tolerance_range is not None:
-            _verified_set(meter, "tolerance.range", args.tolerance_range)
-            changed["CALCulate:TOLerance:RANGe"] = args.tolerance_range
-            final_expected["tolerance.range"] = args.tolerance_range
-        _verify_final_settings(meter, final_expected)
-    except (ProtocolError, TransportError) as exc:
-        if isinstance(exc, TransportError):
-            raise ProtocolError(
-                f"configuration failed because the instrument stopped responding ({exc}); "
-                "no rollback commands were sent and the original configuration is not confirmed"
-            ) from exc
-        try:
-            _restore_configuration(meter, original)
-        except (ProtocolError, TransportError) as restore_exc:
-            raise ProtocolError(
-                f"configuration failed ({exc}); rollback also failed ({restore_exc})"
-            ) from exc
-        raise ProtocolError(f"configuration failed and was rolled back: {exc}") from exc
+    for name, command, value in values:
+        if value is not None:
+            _verified_set(meter, name, value)
+            changed[command] = value
+    if args.secondary == "NULL":
+        primary = args.primary or meter.transport.query("FUNCtion:IMPA?")
+        changed["FUNCtion:IMPB"] = "NULL"
+        if primary.upper() != "DCR":
+            _reset_secondary(meter, primary)
+    elif args.secondary is not None:
+        _verified_set(meter, "function.secondary", args.secondary)
+        changed["FUNCtion:IMPB"] = args.secondary
+    if args.tolerance is not None:
+        _verified_set(meter, "tolerance.enabled", args.tolerance)
+        changed["CALCulate:TOLerance:STATe"] = args.tolerance
+    if args.tolerance_range is not None:
+        _verified_set(meter, "tolerance.range", args.tolerance_range)
+        changed["CALCulate:TOLerance:RANGe"] = args.tolerance_range
     return changed
 
 
@@ -313,10 +305,7 @@ def _raw_line(meter: TH2822D, command: str, read: bool | None = None) -> dict:
 
 
 def _batch(args: argparse.Namespace, meter: TH2822D) -> list[dict]:
-    if str(args.path) == "-":
-        lines = sys.stdin
-    else:
-        lines = args.path.open(encoding="utf-8")
+    lines = sys.stdin if str(args.path) == "-" else args.path.open(encoding="utf-8")
     results = []
     try:
         for number, line in enumerate(lines, 1):
@@ -343,18 +332,16 @@ def run(args: argparse.Namespace) -> None:
         return
     meter, port = _connect(args)
     with meter:
-        identity = meter.identity()
         if args.command == "info":
-            emit({"port": port} | identity.to_dict())
+            emit({"port": port} | meter.identity().to_dict())
         elif args.command == "config":
             emit({"port": port} | meter.configuration().to_dict())
-        elif args.command == "read":
-            emit(_measurement_record(meter, port))
+        elif args.command in {"read", "measure"}:
+            _measure_many(args, meter, port)
         elif args.command == "monitor":
             _monitor(args, meter, port)
         elif args.command == "configure":
-            changed = _configure(args, meter)
-            emit({"port": port, "changed": changed, "configuration": meter.configuration().to_dict()})
+            _configure(args, meter)
         elif args.command == "recording":
             emit({"port": port} | meter.recording_stats())
         elif args.command == "tolerance":
@@ -369,14 +356,12 @@ def run(args: argparse.Namespace) -> None:
             if spec.kind == "action" or not spec.can_write:
                 raise ProtocolError(f"{spec.name} does not accept a value")
             value = validate_value(spec, args.value)
-            response = _verified_set(meter, spec.name, value)
-            emit({"port": port, "name": spec.name, "value": value, "readback": response})
+            _verified_set(meter, spec.name, value)
         elif args.command == "action":
             spec = get_command(args.name)
             if spec.kind != "action":
                 raise ProtocolError(f"{spec.name} is not an action")
             meter.transport.write(spec.command)
-            emit({"port": port, "name": spec.name, "invoked": True})
         elif args.command == "raw":
             emit({"port": port} | _raw_line(meter, args.scpi, args.read))
         elif args.command == "batch":

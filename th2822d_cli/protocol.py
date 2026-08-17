@@ -7,7 +7,6 @@ from dataclasses import asdict, dataclass
 
 from .errors import ProtocolError
 
-
 PRIMARY_UNITS = {"L": "H", "C": "F", "R": "ohm", "Z": "ohm", "DCR": "ohm"}
 SECONDARY_UNITS = {"D": None, "Q": None, "THETA": "deg", "ESR": "ohm", "NULL": None}
 OVERLOAD_MARKERS = {"-----", "----", ""}

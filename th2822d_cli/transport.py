@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import time
 import termios
+import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from pathlib import Path
-from typing import Callable, Iterator
 
 import serial
 from serial.tools import list_ports
 
 from .errors import ProtocolError, TransportError, TransportTimeout
 from .protocol import Identity, parse_identity
-
 
 VID = 0x10C4
 PID = 0xEA60
@@ -67,7 +65,7 @@ class SerialTransport:
         self.query_retries = query_retries
         self._serial: serial.Serial | None = None
 
-    def open(self) -> "SerialTransport":
+    def open(self) -> SerialTransport:
         try:
             self._serial = serial.Serial(
                 self.port,
@@ -156,7 +154,7 @@ class SerialTransport:
         except (OSError, serial.SerialException) as exc:
             raise TransportError(f"cannot reset input buffer on {self.port}: {exc}") from exc
 
-    def __enter__(self) -> "SerialTransport":
+    def __enter__(self) -> "SerialTransport":  # noqa: UP037
         return self.open()
 
     def __exit__(self, exc_type, exc, traceback) -> None:

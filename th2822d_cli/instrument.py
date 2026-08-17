@@ -42,14 +42,14 @@ def _frequency_hz(value: str) -> int:
 
 def _voltage_v(value: str) -> float:
     text = value.strip().upper()
-    return float(text[:-1] if text.endswith("V") else text)
+    return float(text.removesuffix("V"))
 
 
 class TH2822D:
     def __init__(self, transport: SerialTransport) -> None:
         self.transport = transport
 
-    def __enter__(self) -> "TH2822D":
+    def __enter__(self) -> "TH2822D":  # noqa: UP037
         self.transport.open()
         return self
 

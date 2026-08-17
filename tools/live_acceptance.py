@@ -9,9 +9,14 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from th2822d_cli.instrument import TH2822D
-from th2822d_cli.protocol import parse_identity, parse_measurement, parse_number, parse_pair
 from th2822d_cli.errors import TransportError
+from th2822d_cli.instrument import TH2822D
+from th2822d_cli.protocol import (
+    parse_identity,
+    parse_measurement,
+    parse_number,
+    parse_pair,
+)
 from th2822d_cli.transport import SerialTransport, serial_ports
 
 
