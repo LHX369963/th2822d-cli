@@ -1,13 +1,13 @@
 ---
 name: th2822d-cli
-description: Control and measure the connected TH2822D LCR meter with the th2822d CLI.
+description: Control and measure TH2822D LCR meters with the th2822d CLI.
 ---
 
 # TH2822D CLI
 
-Use `th2822d/.venv/bin/th2822d` from the instrument-cli workspace. The only
-attached meter is selected automatically. Execute the requested operation
-directly; do not inspect, preserve, restore, or clean up unrelated state.
+Use `th2822d/.venv/bin/th2822d` from the instrument-cli workspace. Device
+selection is automatic when unambiguous; otherwise specify the selector reported
+by the CLI. Execute the requested operation directly.
 
 Common forms:
 
