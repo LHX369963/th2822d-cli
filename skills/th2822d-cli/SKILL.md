@@ -10,8 +10,8 @@ two levels above this Skill before opening linked files.
 
 ## Core workflow
 
-- Use a known `--port` directly; discover or run `list`/`info`/`config` only
-  when selection, identity, or configuration is uncertain.
+- Omit `--port`; the CLI auto-selects the only attached TH2822-series meter.
+  Specify it only when selection is genuinely ambiguous.
 - Prefer `read`, `configure`, `monitor`, `recording`, `tolerance`, and catalog
   operations. Use `raw` only when no maintained interface exists.
 - Read only the relevant guide: [configuration](../../docs/usage/configure.md),
