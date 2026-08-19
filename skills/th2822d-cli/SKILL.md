@@ -8,6 +8,7 @@ description: Control and measure TH2822D LCR meters with the th2822d CLI.
 Use `th2822d/.venv/bin/th2822d` from the instrument-cli workspace. Device
 selection is automatic when unambiguous; otherwise specify the selector reported
 by the CLI. Execute the requested operation directly.
+Do not scan processes or query preliminary state.
 
 Common forms:
 
